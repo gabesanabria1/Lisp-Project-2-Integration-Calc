@@ -1,0 +1,117 @@
+
+;;Main Integration Functions & Helpers
+
+;;Main function to call
+(defun integrate (F V &optional lo hi)			
+  (def-integral (indef-integral F V) V lo hi)
+)
+
+(defun indef-integral (F V)
+  "Handles evaluation indef integrals and returns an integrated function"				     	
+  (cond ((numberp F)(make-product F V))  		
+		((variable-p F)(make-product 1/2 (make-expt V 2)))
+	
+        ((addition-p F)(handle-addition (operand1 F) (operand2 F) V))
+		((subtraction-p F)(make-neg F V))
+		((expt-p F)(power-rule (operand2 F) V))
+		(t "Invalid Input:")
+  )
+)
+
+(defun def-integral (F V lo hi)
+  "Handles evaluation of definite integrals and returns function or value"
+  (cond ((and (eql lo nil) (eql hi nil)) F)
+	(t (list  (- (eval(subst hi V F)) (eval(subst lo V F)))))
+  )
+)
+
+(defun handle-addition (F G V)
+   "Handles parsing down any function addition function into integratable parts"
+  (cond ((eq 0 F) (indef-integral G V))
+	((eq 0 G) (indef-integral F V))
+	((and (numberp F) (numberp G))(indef-integral (+ F G) 'V))
+        ((or (equal (list sub-symbol F) G)(equal (list sub-symbol G) F)) 0)
+        (t (list sum-symbol (indef-integral F V) (indef-integral G V)))
+   )
+)
+
+(defun make-neg (F V)
+  "Handles any case where a "-" is the operator. passes down to handle-diff if it's
+   subtraction and not negation"
+  (cond ((and (eq (operand1 F) sub-symbol) (null (fourth F)))
+            (indef-integral (first (cddr F)) V))
+	    ((eq (operand1 F) sub-symbol)(indef-integral (cddr F) V))
+	    ((null (operand2 F)) (list sub-symbol (indef-integral(first (rest F)) V)))
+
+	 (t (handle-sub (operand1 F) (operand2 F) V))
+  )
+)
+
+(defun handle-sub (F G V)
+  "Helper function of make-sub that parses down functions into integratable parts"
+  (cond ((eq 0 G) (indef-integral F V))
+	((eq 0 F) (list sub-symbol (indef-integral G V)))
+	((equal F G) 0)
+    ((and (numberp F) (numberp G))(indef-integral (- F G) 'V))
+    (t (list sub-symbol (indef-integral F V) (indef-integral G V)))
+   )
+)
+
+(defun power-rule (G V)
+  "Handles integration of exponential functions"
+  (cond((eq -1 G)(list 'log V))
+       (t (list multiply-symbol (eval(/ 1 (1+ G))) (make-expt V (eval(1+ G)))))
+  )
+)  
+
+;;Constructors
+(defun make-variable (V) V)
+
+(defun make-product (F G)
+  "creates multiplication functions"
+  (cond ((or (eq F 0) (eq G 0)) 0)
+		(t(list multiply-symbol F G))
+  )
+)
+
+(defun make-expt (F G)
+  "creates exponential functions"
+  (cond ((eq  0 G)1)
+	((eq  0 F)0)
+	((and (numberp F) (numberp G))(expt F G))
+	(t (list power-symbol F G))
+  )
+)
+
+;;Selectors
+(defun operator-selector (F) (first F)) ;;Grabs operator
+(defun operand1 (F) (second F))			;;Grabs first operand
+(defun operand2 (F) (third F))			;;Grabs second operand
+
+
+;;Predicates
+(defun variable-p (F)
+  "Checks to see if function is a lone variable"
+  (cond((listp F)(variable-p (first F)))
+       (t(not(null(member F variable-symbols))))
+   )
+)
+
+(defun addition-p (F)
+   "Checks to see if function is a unparsed addition"
+  (eq (operator-selector F) sum-symbol))
+
+(defun subtraction-p (F)
+  "Checks to see if function is a unparsed subtraction"
+  (eq (operator-selector F) sub-symbol))
+
+(defun expt-p (F)
+  "Checks to see if function is a unparsed exponentiation"
+  (eq (operator-selector F) power-symbol))
+
+;; Constants
+(defconstant variable-symbols '(U V W X Y Z))
+(defconstant sub-symbol       '-)
+(defconstant sum-symbol       '+)
+(defconstant multiply-symbol  '*)
+(defconstant power-symbol     'expt)
