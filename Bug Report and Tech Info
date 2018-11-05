@@ -1,0 +1,19 @@
+%%%---------------------------------Bug Report------------------------------------%%%
+
+Bug 1: Fails to simplify certain algebraic functions such as
+		a. negation of a negation
+		i.e. (- ( - x))
+		b. does not equate a triple negated function to the inverse of a function
+	    i.e. (+ x (- - - X))
+	   
+%%%---------------------------Technocal Information-------------------------------%%%	   
+
+Files:---------------------	   
+Location:--------------------
+
+How to run: 1. open emacs
+            2. enter lisp mode by pressing alt + X and typing in "lisp mode", 
+			         pressing enter, and F9
+	       		3. open file from where ever you've saved it
+       			4. press Cnt + c Ctrl + k, y
+       			5. typing desired function in on console
